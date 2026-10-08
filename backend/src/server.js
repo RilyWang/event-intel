@@ -64,7 +64,7 @@ app.get('/api/stats', (req, res) => {
     events: c('SELECT COUNT(*) c FROM event'),
     evidence: c('SELECT COUNT(*) c FROM evidence'),
     pending_notifications: c('SELECT COUNT(*) c FROM notification WHERE is_read=0'),
-    by_status: db.prepare('SELECT status, COUNT(*) c FROM event GROUP BY status').all(),
+    by_status: db.prepare('SELECT status, COUNT(*) c FROM event GROUP BY status ORDER BY status').all(),
   });
 });
 

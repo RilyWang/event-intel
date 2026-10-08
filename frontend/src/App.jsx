@@ -13,14 +13,17 @@ export default function App() {
   const [code, setCode] = useState(null);
   const [stats, setStats] = useState(null);
   const [meta, setMeta] = useState(null);
+  const [readonly, setReadonly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
   async function refresh() {
     try {
-      const [s, m] = await Promise.all([svc.stats(), svc.meta()]);
+      const [s, m, h] = await Promise.all([svc.stats(), svc.meta(), svc.health()]);
       setStats(s);
       setMeta(m);
+      // 只读快照部署下，写入类操作不可用：界面明确提示，而不是报错
+      setReadonly(h?.mode === 'snapshot');
       setErr(null);
     } catch (e) {
       setErr(e.message);
@@ -60,12 +63,20 @@ export default function App() {
           数据截止日：<b>{meta?.as_of}</b><br />
           iFinD MCP：未接入<br />
           扶摇：未接入<br />
-          公开材料 / 样例：可用
+          公开材料 / 样例：可用<br />
+          {readonly
+            ? <span style={{ color: '#d46b08' }}>运行模式：只读快照演示</span>
+            : <span>运行模式：本地完整版</span>}
         </div>
       </Sider>
 
       <Content className="main">
         {err && <Alert type="error" showIcon message={`接口异常：${err}`} style={{ marginBottom: 14 }} />}
+        {readonly && (
+          <Alert type="info" showIcon style={{ marginBottom: 12 }}
+            message="当前为只读快照演示版"
+            description="页面数据由 kimi-k2.6 真实抽取生成，浏览 / 筛选 / 切换页签 / 查看时间线与证据均可正常使用；「重跑主链路」与「标记已读」为写入操作，需完整 Node 版（见 README）。" />
+        )}
         <div className="disclaimer">⚠️ {meta?.disclaimer}</div>
 
         <Row gutter={12} style={{ marginBottom: 16 }}>
@@ -77,9 +88,9 @@ export default function App() {
           <Col span={4}><Card size="small"><Statistic title="待读通知" value={stats?.pending_notifications ?? 0} valueStyle={{ color: '#c8161d' }} /></Card></Col>
         </Row>
 
-        {view === 'events' && <EventList meta={meta} onOpen={goDetail} />}
+        {view === 'events' && <EventList meta={meta} onOpen={goDetail} readonly={readonly} />}
         {view === 'detail' && <EventDetail code={code} meta={meta} onBack={backToList} onChanged={refresh} />}
-        {view === 'notifications' && <Notifications meta={meta} onOpen={(c) => goDetail(c)} onChanged={refresh} />}
+        {view === 'notifications' && <Notifications meta={meta} onOpen={(c) => goDetail(c)} onChanged={refresh} readonly={readonly} />}
         {view === 'documents' && <Documents />}
       </Content>
     </Layout>

@@ -3,7 +3,7 @@ import { Card, Table, Tag, Select, Input, Space, Button, message } from 'antd';
 import { svc } from '../api.js';
 import { STATUS_COLOR, CONF_COLOR } from '../constants.js';
 
-export default function EventList({ meta, onOpen }) {
+export default function EventList({ meta, onOpen, readonly }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
@@ -26,6 +26,10 @@ export default function EventList({ meta, onOpen }) {
   useEffect(() => { load(); }, [status, kw]);
 
   async function rerun() {
+    if (readonly) {
+      message.info('当前为只读快照演示版，不支持在线重跑；页面数据即由 kimi-k2.6 真实抽取生成，完整流水线请按 README 本地运行。');
+      return;
+    }
     try {
       await svc.runPipeline();
       message.success('已重跑主链路（采集→抽取→归并→分级→状态→结论）');

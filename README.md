@@ -113,30 +113,34 @@ evidence_weight = w_source × c_type × d_time × 100
 
 | 项目 | 原因 |
 | --- | --- |
-| 部署到持久公开 URL | 环境无 Cloudflare/Vercel 凭证；代码已就绪（单进程同域托管，可直接部署到任意 Node 主机） |
+| 线上「重跑主链路」 | 采用 Cloudflare Pages 快照版部署（该运行时无 `node:sqlite`／文件系统）；界面已明确提示，完整流水线在本地可跑 |
 | 接入 iFinD MCP / 扶摇 | 未提供凭证与接入配置 |
-| LLM 真实调用验证 | 代码已完成并通过降级测试，但**缺 API Key，未做真实模型调用验证** |
 | 人工纠正归并（拆开/合并） | 优先级低于主链路，v1 未实现 |
 | 全市场覆盖 | v1 聚焦 2 只虚构标的、3 类事件 |
 | 用户体系与权限 | v1 单用户、无登录 |
+| Render 部署 | 免费层要求绑卡，且 `onrender.com` 在本网络不可达（见 DEPLOY.md §0 实测表） |
 
 ## 7. 目录结构
 
 ```
-event-intel/                        # Git 仓库（已初始化，首次提交 d9f6180）
+event-intel/                        # Git 仓库：https://github.com/RilyWang/event-intel
 ├── 02-需求清单.md                  # R-01..R-08 + 合规边界
 ├── 03-事件状态机定义.md            # 状态机 / 权重公式 / 通知规则（设计核心）
 ├── 04-数据库Schema.md              # 10 张表（锁定文件）
 ├── 05-外部依赖与环境现状.md        # 实测：哪些依赖可用/不可用 + 如何补齐
 ├── 08-开发计划.md                  # 48 小时排期
 ├── 09-测试用例.md                  # 主链路 / 异常 / 合规三组
-├── README.md / AI使用与验证记录.md
-├── .gitignore                      # 排除 node_modules、数据库、.env
+├── README.md / AI使用与验证记录.md / DEPLOY.md
+├── Dockerfile / render.yaml        # 完整版（常驻 Node）部署备选
+├── cf/                             # 快照版共享逻辑与数据
+│   ├── lib.js                      # 在快照上实现与 Express 一致的 API 契约
+│   └── snapshot.js                 # 由 backend/src/snapshot.js 生成（含 LLM 抽取结果）
+├── functions/api/                  # Cloudflare Pages Functions 路由（薄封装）
 ├── backend/                        # Node + Express + 内置 node:sqlite（零原生依赖）
 │   ├── schema.sql                  # 建表 SQL（可重复执行）
 │   ├── .env.example                # LLM 配置模板（复制为 .env 填 Key）
-│   ├── src/{db,env,llm,rules,stateMachine,pipeline,samples,seed,server}.js
-│   └── tests/{run.js,api-check.js} # 37 + 14 项测试
+│   ├── src/{db,env,llm,rules,stateMachine,pipeline,samples,seed,snapshot,server}.js
+│   └── tests/{run,api-check,cf-parity,inspect,llm-live-check}.js   # 37 + 14 + 10 项测试
 └── frontend/                       # React + Vite + antd（独立前端）
     ├── src/{App.jsx,api.js,constants.js,pages/*}
     └── dist/                       # 构建产物，由后端同域托管
@@ -194,7 +198,17 @@ npm start                # 重启后生效；用 /api/llm/status 确认
 cd backend
 node tests/run.js        # 37 项：主链路 / 数据接口异常 / 合规边界 / LLM 降级
 node tests/api-check.js  # 14 项：接口层（需后端已启动）
+node tests/cf-parity.js  # 10 项：Express 版 vs Cloudflare Pages 快照版 接口一致性
 ```
 
-当前结果：**后端 37/37 通过，接口 14/14 通过**；前端 5 个页面端到端验证通过，0 JS 报错。
+当前结果：**后端 37/37 通过，接口 14/14 通过，一致性 10/10 通过**；前端 5 个页面端到端验证通过，0 JS 报错。
+
+## 10. 部署
+
+线上采用 **Cloudflare Pages 快照版**（免信用卡、`pages.dev` 国内可达）：
+
+- 完整步骤与实测依据见 **[DEPLOY.md](DEPLOY.md)**
+- 快照版把已由 LLM 抽取好的结果固化为 `cf/snapshot.js`，由 `functions/api/*` 提供**只读** API
+- 与完整版（Express）的接口输出已用 `tests/cf-parity.js` 验证**逐字节一致**
+- 线上无需任何密钥；完整版（含在线重跑）见 `Dockerfile` / `render.yaml`
 

@@ -3,7 +3,7 @@ import { Card, Table, Tag, Button, Space, message, Alert } from 'antd';
 import { svc } from '../api.js';
 import { STATUS_COLOR, TRIGGER_CN } from '../constants.js';
 
-export default function Notifications({ meta, onOpen, onChanged }) {
+export default function Notifications({ meta, onOpen, onChanged, readonly }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,6 +21,10 @@ export default function Notifications({ meta, onOpen, onChanged }) {
   useEffect(() => { load(); }, []);
 
   async function markRead(id) {
+    if (readonly) {
+      message.info('当前为只读快照演示版，标记已读属写入操作，需完整 Node 版（见 README）。');
+      return;
+    }
     try {
       await svc.readNotification(id);
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, is_read: 1 } : r)));

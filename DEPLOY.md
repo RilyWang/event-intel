@@ -1,94 +1,103 @@
-# 部署说明（GitHub + Render）
+# 部署说明 —— Cloudflare Pages（免信用卡、国内可访问）
 
-> 目标：拿到一个**持久、无提醒页**的公网地址（题目要求的"可访问 Web 产品 URL"）。
-> 本项目是**单进程整站**：后端同时提供 API 与前端页面，因此只需部署一个服务。
+> 目标：取得**可访问的 Web 产品 URL**。已实测各平台在本网络的可用性，结论如下。
 
-## 前置：环境实测结论（决定了本方案为什么这样设计）
+## 0. 为什么是 Cloudflare Pages（实测依据）
 
-| 事实 | 影响 |
-| --- | --- |
-| 本机 `github.com:443` 不通，但 `github.com:22`（SSH）通 | 推送必须走 **SSH**，不能用 HTTPS / PAT |
-| `api.github.com` 通 | 可用 REST API 创建仓库 |
-| `8787`、`8899` 端口被平台代理占用 | 本地后端改用 `5311` |
-| Render 登录方式是 GitHub | 仓库必须先存在于 GitHub，Render 才能拉取 |
+| 平台 / 域名 | 结果 | 说明 |
+| --- | --- | --- |
+| **`pages.dev`（Cloudflare Pages）** | ✅ 可达 | **免费、无需信用卡**，Functions 也跑在同一域名 |
+| `cloud.sealos.io` | ✅ 可达 | 国内平台，备选（需注册，可能需实名） |
+| `cnb.cool` | ✅ 可达 | 国内平台，备选 |
+| `onrender.com`（Render 部署域名） | ❌ **不可达** | 且 Render 免费层也要求**绑定信用卡**验证身份 |
+| `vercel.app` | ❌ 不可达 | 域名网络不通 |
+| `netlify.app` / `koyeb.app` | ❌ 不可达 | 同上 |
+| `workers.dev` | ❌ 不可达 | 但 `pages.dev` 可达，故走 Pages |
+| `huggingface.co` | ❌ 不可达 | HF Spaces 方案不可用 |
 
-## 第 1 步：在 GitHub 建空仓库（约 1 分钟）
+**另一项硬约束**：Cloudflare 运行时（Workers/Pages Functions）**不支持 `node:sqlite` 与文件系统**，因此线上版本采用「**快照模式**」：把本地已跑通的 LLM 抽取结果导出为快照，由 Pages Functions 提供只读 API。
 
-登录 GitHub，新建仓库：
+## 1. 两种运行形态（同一套代码）
 
-- **Repository name**：`event-intel`
-- **Public / Private**：按作业要求选（Render 免费层两者都支持）
-- **不要**勾选 "Add a README"、"Add .gitignore"、"Choose a license"（必须建**空仓库**，否则推送会冲突）
+| | 完整版（本地 / Node 主机） | 快照版（Cloudflare Pages） |
+| --- | --- | --- |
+| 数据层 | `node:sqlite` 文件库 | 只读快照（`cf/snapshot.js`） |
+| 接口实现 | Express（`backend/src/server.js`） | Pages Functions（`functions/api/*`） |
+| 读操作（浏览/筛选/切页签/看时间线证据结论） | ✅ | ✅ |
+| 写操作（重跑主链路 / 标记已读） | ✅ | ⚠️ 不可用，界面会明确提示 |
+| 需要 LLM Key | 是（实时抽取） | **否**（数据已由 LLM 抽取并固化为快照） |
+| **接口一致性** | —— | **已用 `tests/cf-parity.js` 验证 10/10 逐字节一致** |
 
-建好后仓库地址应为：`https://github.com/RilyWang/event-intel`
+> 快照里的事件、证据、状态演化、结论、通知，都是 `kimi-k2.6` **真实抽取**产生的，不是写死的假数据。
 
-> 本地 remote 已配置为 `git@github.com:RilyWang/event-intel.git`，SSH 公钥已验证可用（`Hi RilyWang! You've successfully authenticated`）。
+## 2. 部署步骤（Cloudflare Pages，约 3 分钟）
 
-## 第 2 步：推送代码（我来执行）
+### 前置
+- Cloudflare 账号（邮箱注册即可，**不需要信用卡**）
+- 代码已在 GitHub：`https://github.com/RilyWang/event-intel`
 
-仓库建好后告知即可，我执行：
-
-```bash
-git push -u origin main
-```
-
-## 第 3 步：部署到 Render（约 3 分钟）
-
-### 方式 A：Blueprint 一键（仓库里已有 `render.yaml`）
-
-Render 控制台 → **New** → **Blueprint** → 选择 `RilyWang/event-intel` → Apply。
-`render.yaml` 已写好构建/启动命令与 `NODE_VERSION=24`。
-
-### 方式 B：手动建 Web Service（若 Blueprint 不识别）
-
-Render 控制台 → **New** → **Web Service** → 连接 `event-intel`，按下表填写：
+### 步骤
+1. 登录 Cloudflare → 左侧 **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
+2. 授权并选择仓库 **`RilyWang/event-intel`**
+3. 构建设置按下表填写（**关键**）：
 
 | 字段 | 填写内容 |
 | --- | --- |
-| Runtime | Node |
-| Build Command | `npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install` |
-| Start Command | `node backend/src/server.js` |
-| Health Check Path | `/api/health` |
-| Instance Type | Free |
+| Framework preset | `None` |
+| Build command | `npm --prefix frontend install && npm --prefix frontend run build` |
+| Build output directory | `frontend/dist` |
+| Root directory | 留空（仓库根目录） |
 
-**环境变量（Environment → Add Environment Variable）**：
+4. 点 **Save and Deploy**
+   - `functions/` 目录会被自动识别为 Pages Functions，无需额外配置
+   - `_routes.json` 已放在 `frontend/public/`，构建时自动复制到输出目录，用于把 `/api/*` 交给 Functions
+   - **不需要配置任何环境变量**（快照版不含密钥）
+5. 部署完成后得到地址：`https://event-intel.pages.dev`（或带随机后缀）
 
-| Key | Value |
+### 命令行方式（备选）
+```bash
+# 需要 Cloudflare API Token（My Profile → API Tokens，模板选 "Edit Cloudflare Workers"）
+npx wrangler pages deploy frontend/dist --project-name event-intel
+```
+
+## 3. 部署后自检清单
+
+| 检查 | 期望 |
 | --- | --- |
-| `NODE_VERSION` | `24` |
-| `LLM_BASE_URL` | `https://api.moonshot.cn/v1` |
-| `LLM_MODEL` | `kimi-k2.6` |
-| `LLM_TEMPERATURE` | `1` |
-| `LLM_API_KEY` | 你的 Key（**只填在 Render 控制台，不要写进仓库**） |
+| `GET https://<域名>/api/health` | `code:0`，且 `data.mode === "snapshot"` |
+| `GET https://<域名>/api/events` | 3 个事件，状态为 `denied / corrected / expired` |
+| 首页 | 正常渲染，顶部有「只读快照演示版」提示 |
+| 事件详情 | 4 个时间戳、5 条时间线、证据权重构成、状态规则记录（P1/P3/P5/P6）、版本演化均在 |
+| `/api/events?status=denied` | 过滤生效，返回 1 条 |
 
-> `NODE_VERSION` 必须固定：`node:sqlite` 自 Node 22.13 起才免 flag，Node 过旧会启动失败。
+## 4. 完整版部署（可选，需要常驻 Node 运行时）
 
-### 方式 C：Docker（仓库里已有 `Dockerfile`）
+若希望线上也能「重跑主链路」（实时调用 LLM），需要支持 Node + 可写磁盘的平台：
 
-把 Render 服务的 Runtime 选为 **Docker**，无需填写构建/启动命令，环境变量同上。
+```bash
+cd backend && npm install && npm start   # 默认 5311
+```
+- 仓库已含 `Dockerfile`（`node:24-alpine`，先构建前端再由后端同域托管，单进程整站）
+- 环境变量：`LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY` / `LLM_TEMPERATURE`
+- **注意**：Dockerfile 与 Render 配置在本机**无法实测**（本机无 Docker、Render 需信用卡且域名不可达），仅作为备选保留
 
-## 第 4 步：验证（我来执行）
+## 5. 数据更新方式（快照版）
 
-部署完成后把 Render 给的地址（形如 `https://event-intel-xxxx.onrender.com`）告诉我，我会验证：
+本地改了样例数据或换了模型后，重新生成快照并推送即可：
 
-1. `GET /api/health` 返回 `{code:0,...}` 且 `llm.available=true`
-2. `GET /api/events` 返回 3 个事件、状态为 `denied / corrected / expired`
-3. 首页返回真实应用（不是错误页）
-4. `/api/llm/status` 显示 `events_extracted_by_llm=3`
+```bash
+cd backend
+node src/seed.js        # 重跑主链路（走 LLM）
+node src/snapshot.js    # 导出快照到 cf/snapshot.js
+cd .. && git add -A && git commit -m "更新快照" && git push
+```
+Cloudflare Pages 检测到推送会自动重新构建部署。
 
-## 已知风险（如实声明，未在本机验证）
+## 6. 风险与边界（如实声明）
 
-| 风险 | 说明 | 应对 |
-| --- | --- | --- |
-| Docker 路径未实测 | 本机无 Docker，无法本地验证 `Dockerfile` | 优先用方式 A/B（Node 原生），方式 C 作为备选 |
-| `render.yaml` 字段名随 Render 版本变化 | 未能在本机对 Render 校验 | 若 Blueprint 报错，改用方式 B 手动填写（等价） |
-| 免费实例会休眠 | 闲置后首次访问需等待数十秒唤醒 | 演示前先访问一次预热 |
-| 免费实例磁盘为临时盘 | 重新部署后 SQLite 数据重置 | 服务启动时会自动重新 seed，演示数据总能复现 |
-
-## 备用部署路径（若 Render 不顺）
-
-| 平台 | 需要 | 备注 |
-| --- | --- | --- |
-| Railway | 账号 Token | 同样支持 Node / Docker |
-| Fly.io | 账号 Token | 其 CLI 从 GitHub 下载，本机下不来，需在您本机操作 |
-| 任意 VPS | SSH 访问 | 直接 `git clone` + `node backend/src/server.js` |
+| 项 | 说明 |
+| --- | --- |
+| 快照版不支持写入 | 界面已明确提示，不会伪装成功；`/api/pipeline/run`、`/api/notifications/:id/read` 返回 `code:503` 与原因说明 |
+| 快照为静态数据 | 数据截止日 `2026-08-25`，与本地一致；页面上有标注 |
+| Cloudflare 首次审核 | 新账号首次部署偶有排队，通常数分钟内完成 |
+| 接口一致性已验证 | 但仅覆盖 10 个用例，未穷举所有查询组合 |

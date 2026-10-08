@@ -69,13 +69,21 @@ evidence_weight = w_source × c_type × d_time × 100
 
 | 环节 | 谁来做 | 原因 |
 | --- | --- | --- |
-| 事件抽取（主体/类型/要素） | AI（LLM）+ 规则兜底 | 自然语言理解是 AI 的强项；不可用时规则兜底 |
-| 事件归并（是否同一事件） | 规则为主（主体+类型），AI 辅助 | 归并必须给出**可解释理由**，不能是黑盒 |
+| 事件抽取（主体/类型/要素） | **AI（LLM）为主 + 规则兜底** | 自然语言理解是 AI 的强项；LLM 不可用时自动回退规则，主链路不中断 |
+| 事件归并（是否同一事件） | 规则为主（主体+类型） | 归并必须给出**可解释理由**，不能是黑盒 |
 | **证据权重计算** | **纯规则** | 必须可复现、可解释、可追溯 |
 | **状态判定与结论重算** | **纯规则** | 同上；结论要能回答"为什么这么判" |
 | 结论文案汇总 | 规则模板 | 避免 LLM 生成超出证据的表述（合规风险） |
 
 设计取舍：**LLM 只做"理解"，不做"判定"**。判定类逻辑全部规则化，保证每个结论都能追溯到具体规则编号（P1~P12）。
+
+**LLM 已在代码中实现**（`backend/src/llm.js`），启用方式见 §8；未配置 Key 时全链路走规则抽取，功能完整。三重防护保证 LLM 不污染数据：
+
+1. **输出结构校验**：必须是合法 JSON 且字段在枚举内，否则丢弃并重试 1 次；
+2. **证据真实性校验**：`quote` 必须是**原文连续子串**，编造内容一律拒绝入库（防幻觉）；
+3. **自动降级**：超时/不可达/校验失败 → 回退规则抽取，并记录 `llm_fallback_reason`。
+
+状态接口 `GET /api/llm/status` 可随时查看当前走的是 LLM 还是规则。
 
 ## 4. 数据使用
 
@@ -93,17 +101,17 @@ evidence_weight = w_source × c_type × d_time × 100
 1. **真实数据源未接入**：iFinD MCP 与扶摇在本环境不可用，当前主链路跑在样例数据 + 公开材料适配器上；接入后仅需替换适配器实现，**不改数据库与状态机**。
 2. **事件归并仍偏规则**：目前按"主体 + 事件类型"归并。同一主体同类事件的**细分归并**（如两笔不同收购）尚未做，需人工纠正入口（未实现）。
 3. **"事件发生时间"多数缺失**：原文很少显式给出，故常显示"原文未提及"。
-4. **证据类型判定依赖关键词**：反讽、多义表述可能误判。
+4. **证据类型判定依赖关键词**：反讽、多义表述可能误判（LLM 启用后由模型判断，准确性提升但仍非 100%）。
 5. **影响验证仅是参考**：只呈现行情数据，不做因果推断。
-6. **未部署到公网**：缺部署凭证（见"未做事项"）。
+6. **未部署到持久公网地址**：缺部署凭证；当前可用本机 + 隧道方式临时访问（见 §8）。
 
 ## 6. 未做事项
 
 | 项目 | 原因 |
 | --- | --- |
-| 部署到公开 URL | 环境无 Cloudflare/Vercel 凭证，也无 git/gh CLI |
+| 部署到持久公开 URL | 环境无 Cloudflare/Vercel 凭证；代码已就绪（单进程同域托管，可直接部署到任意 Node 主机） |
 | 接入 iFinD MCP / 扶摇 | 未提供凭证与接入配置 |
-| LLM 真接入（当前为规则驱动） | 需独立 API Key；规则兜底已保证主链路完整可跑 |
+| LLM 真实调用验证 | 代码已完成并通过降级测试，但**缺 API Key，未做真实模型调用验证** |
 | 人工纠正归并（拆开/合并） | 优先级低于主链路，v1 未实现 |
 | 全市场覆盖 | v1 聚焦 2 只虚构标的、3 类事件 |
 | 用户体系与权限 | v1 单用户、无登录 |
@@ -111,51 +119,71 @@ evidence_weight = w_source × c_type × d_time × 100
 ## 7. 目录结构
 
 ```
-event-intel/
+event-intel/                        # Git 仓库（已初始化，首次提交 d9f6180）
 ├── 02-需求清单.md                  # R-01..R-08 + 合规边界
 ├── 03-事件状态机定义.md            # 状态机 / 权重公式 / 通知规则（设计核心）
 ├── 04-数据库Schema.md              # 10 张表（锁定文件）
-├── 05-外部依赖与环境现状.md        # 实测：哪些依赖可用/不可用
+├── 05-外部依赖与环境现状.md        # 实测：哪些依赖可用/不可用 + 如何补齐
 ├── 08-开发计划.md                  # 48 小时排期
 ├── 09-测试用例.md                  # 主链路 / 异常 / 合规三组
-├── README.md
-├── AI使用与验证记录.md
+├── README.md / AI使用与验证记录.md
+├── .gitignore                      # 排除 node_modules、数据库、.env
 ├── backend/                        # Node + Express + 内置 node:sqlite（零原生依赖）
 │   ├── schema.sql                  # 建表 SQL（可重复执行）
-│   ├── src/{db,rules,stateMachine,pipeline,samples,seed,server}.js
-│   └── tests/{run.js,api-check.js} # 33 + 14 项测试
+│   ├── .env.example                # LLM 配置模板（复制为 .env 填 Key）
+│   ├── src/{db,env,llm,rules,stateMachine,pipeline,samples,seed,server}.js
+│   └── tests/{run.js,api-check.js} # 37 + 14 项测试
 └── frontend/                       # React + Vite + antd（独立前端）
-    └── src/{App.jsx,api.js,constants.js,pages/*}
+    ├── src/{App.jsx,api.js,constants.js,pages/*}
+    └── dist/                       # 构建产物，由后端同域托管
 ```
 
 ## 8. 如何运行
 
-前置：Node.js（本环境位于 `D:\Zcode\tools\node-v25.8.1-win-x64`，需加入 PATH）：
+前置：Node.js（本环境位于 `D:\Zcode\tools\node-v25.8.1-win-x64`）与 Git（`D:\Zcode\tools\portablegit\package\out\cmd`）加入 PATH：
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\Zcode\tools\add-node-path.ps1
+$env:PATH = "D:\Zcode\tools\node-v25.8.1-win-x64;D:\Zcode\tools\portablegit\package\out\cmd;$env:PATH"
 ```
+
+### 8.1 单进程整站模式（推荐，也是部署形态）
+
+后端同时提供 API 与前端页面，**一个端口即整站**：
 
 ```bash
-# 1) 后端（默认 8899；8787 被环境内其它服务占用）
 cd backend
 npm install
-npm run seed     # 生成演示数据（可选，首次启动会自动初始化）
-npm start        # http://127.0.0.1:8899/api/health
-
-# 2) 前端（默认 5199；5173 被占用）
-cd frontend
-npm install
-npm run dev      # http://localhost:5199
+npm run seed                 # 生成演示数据
+npm start                    # 打开 http://127.0.0.1:8899
+# 若未构建前端，先执行 cd ../frontend && npm install && npm run build
 ```
 
-> 注意：Vite 在本环境绑定 IPv6，请用 `http://localhost:5199` 访问（`127.0.0.1` 不通）。
+### 8.2 前后端分离开发模式
+
+```bash
+# 终端 1：后端（8899）
+cd backend && npm install && npm start
+# 终端 2：前端（5199，通过代理访问 /api）
+cd frontend && npm install && npm run dev   # http://localhost:5199
+```
+
+> 注意：Vite 在本环境绑定 IPv6，开发模式请用 `http://localhost:5199`（`127.0.0.1` 不通）。
+
+### 8.3 启用 LLM 抽取（可选）
+
+```bash
+cd backend
+cp .env.example .env     # 然后编辑 .env 填入 LLM_API_KEY
+# LLM_BASE_URL / LLM_MODEL 按厂商填写，模板里已给出智谱/DeepSeek/Qwen/Kimi 的取值
+npm start                # 重启后生效；用 /api/llm/status 确认
+```
 
 ## 9. 测试
 
 ```bash
 cd backend
-node tests/run.js        # 33 项：主链路 / 数据接口异常 / 合规边界
+node tests/run.js        # 37 项：主链路 / 数据接口异常 / 合规边界 / LLM 降级
 node tests/api-check.js  # 14 项：接口层（需后端已启动）
 ```
 
-当前结果：**后端 33/33 通过，接口 14/14 通过**；前端 5 个页面端到端验证通过，0 JS 报错。
+当前结果：**后端 37/37 通过，接口 14/14 通过**；前端 5 个页面端到端验证通过，0 JS 报错。
+

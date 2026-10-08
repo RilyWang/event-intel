@@ -2,6 +2,8 @@
 import express from 'express';
 import cors from 'cors';
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { initDb, DB_PATH, nowStamp } from './db.js';
 import { AS_OF, EVENT_TYPE_CN, EVIDENCE_TYPE_CN, STATUS_CN, DIRECTION_CN } from './rules.js';
 import { seed } from './seed.js';
@@ -9,6 +11,8 @@ import { loadEnv, llmStatus } from './env.js';
 
 const PORT = process.env.PORT || 8899;
 // 注：8787 已被环境内其它服务占用，故默认使用 8899。
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 loadEnv(); // 读取 backend/.env（若存在）
 
@@ -140,6 +144,18 @@ app.post('/api/pipeline/run', async (req, res) => {
     fail(res, 500, `流水线执行失败：${e.message}`);
   }
 });
+
+// 生产形态：同域托管前端构建产物（frontend/dist），单进程即整站
+// 开发时前端仍走独立 Vite dev server（5199），通过代理访问 /api
+const DIST_DIR = path.join(__dirname, '..', '..', 'frontend', 'dist');
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+  // SPA 回退：非 /api 的路径一律返回 index.html
+  app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(DIST_DIR, 'index.html')));
+  console.log(`[backend] 已托管前端构建产物: ${DIST_DIR}`);
+} else {
+  console.log('[backend] 未发现 frontend/dist，仅提供 API（前端请用 npm run dev）');
+}
 
 app.use((err, req, res, next) => {
   console.error(err);

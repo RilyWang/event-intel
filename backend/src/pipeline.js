@@ -24,6 +24,12 @@ function pickQuote(content) {
   return (hit || parts[0] || content).slice(0, 140);
 }
 
+/** 规则侧事件类型判定（供规则抽取与 LLM 结果的 other 兜底共用） */
+export function ruleEventType(text) {
+  for (const [re, ty] of TYPE_RE) if (re.test(text)) return ty;
+  return 'other';
+}
+
 /** F-02 抽取 · 规则分支（无 LLM 时使用，也是 LLM 失败时的兜底） */
 export function extractByRule(doc, targets) {
   const text = `${doc.title} ${doc.content}`;
@@ -40,8 +46,7 @@ export function extractByRule(doc, targets) {
     if (hitAlias) { subject = t; matchedBy = 'alias'; mergeConfidence = 80; break; }
   }
 
-  let eventType = 'other';
-  for (const [re, ty] of TYPE_RE) if (re.test(text)) { eventType = ty; break; }
+  const eventType = ruleEventType(text);
 
   const amounts = [...text.matchAll(/([\d.]+)\s*(亿|万)?元/g)].map((m) => `${m[1]}${m[2] || ''}元`);
   const dm = text.match(/(20\d{2})年(\d{1,2})月(\d{1,2})日/);
@@ -66,16 +71,28 @@ export async function extract(doc, targets) {
 
   // LLM 未识别出主体时，仍用规则再试一次主体匹配（避免因模型漏判而丢事件）
   if (llm && !llm.fallback && llm.subject) {
+    let eventType = llm.eventType;
+    let typeNote = 'llm';
+    // 防事件碎片化：模型给出 other（弱默认）但规则能识别出具体类型时，采用规则类型。
+    // 否则"澄清/更正"类文本会被归到 other，导致同一事件被拆成两个、状态演化中断。
+    if (eventType === 'other') {
+      const ruleType = ruleEventType(`${doc.title} ${doc.content}`);
+      if (ruleType !== 'other') {
+        eventType = ruleType;
+        typeNote = 'llm_subject+rule_type';
+      }
+    }
     return {
       subject: llm.subject,
       matchedBy: 'llm',
       mergeConfidence: 90,
-      eventType: llm.eventType,
+      eventType,
       amounts: llm.amounts,
       eventTime: llm.eventTime,
       evidenceType: llm.evidenceType,
       quote: llm.quote,
       extractMethod: 'llm',
+      event_type_source: typeNote,
       llm_attempts: llm.attempts,
     };
   }

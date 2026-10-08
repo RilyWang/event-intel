@@ -10,6 +10,10 @@ import { nextStatus, checkExpiry } from '../src/stateMachine.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEST_DB = path.join(__dirname, '..', 'data', 'test.db');
 
+// 测试必须确定性、可离线复跑：强制禁用 LLM，走规则分支。
+// LLM 分支本身由本文件后段的 TC-F02-003 / TC-EX-001/002b/002c 专项覆盖。
+process.env.LLM_DISABLED = '1';
+
 const results = [];
 function check(id, name, cond, detail = '') {
   results.push({ id, name, pass: !!cond, detail });
@@ -131,6 +135,8 @@ check('TC-F02-003', 'LLM 未配置时自动回退规则抽取', exNoKey.extractM
   `method=${exNoKey.extractMethod} reason=${exNoKey.llm_fallback_reason}`);
 
 // 2) 配了 Key 但服务不可达：重试后回退规则，仍能完成抽取
+//    （临时解除测试禁用，确保这条真的走到了 LLM 网络路径）
+delete process.env.LLM_DISABLED;
 process.env.LLM_BASE_URL = 'http://127.0.0.1:9';
 process.env.LLM_API_KEY = 'test-key';
 process.env.LLM_MODEL = 'test-model';
@@ -140,6 +146,7 @@ check('TC-EX-001', 'LLM 不可达时重试后回退规则、不抛错', exBad.ex
   String(exBad.llm_fallback_reason));
 delete process.env.LLM_BASE_URL; delete process.env.LLM_API_KEY;
 delete process.env.LLM_MODEL; delete process.env.LLM_TIMEOUT_MS;
+process.env.LLM_DISABLED = '1';
 
 // 3) LLM 编造原文没有的内容 → 校验拒绝（防幻觉）
 const fake = parseAndValidate(

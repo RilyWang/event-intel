@@ -29,24 +29,30 @@ export function loadEnv(force = false) {
 }
 
 export function llmConfig() {
+  loadEnv();
   return {
     base: (process.env.LLM_BASE_URL || '').trim(),
     key: (process.env.LLM_API_KEY || '').trim(),
     model: (process.env.LLM_MODEL || '').trim(),
     timeoutMs: Number(process.env.LLM_TIMEOUT_MS || 20000),
+    // 未配置则不发该参数：不同厂商对 temperature 的允许范围不同（如 kimi-k2.6 仅接受 1）
+    temperature: process.env.LLM_TEMPERATURE ? Number(process.env.LLM_TEMPERATURE) : undefined,
   };
 }
 
 /** LLM 是否可用（三项齐全才算）。缺任一 → 走规则兜底。 */
 export function llmAvailable() {
+  if (process.env.LLM_DISABLED === '1') return false; // 测试/离线模式
   const c = llmConfig();
   return !!(c.base && c.key && c.model);
 }
 
 export function llmStatus() {
+  loadEnv();
   const c = llmConfig();
   return {
     available: llmAvailable(),
+    disabled_by_flag: process.env.LLM_DISABLED === '1',
     base_url: c.base || null,
     model: c.model || null,
     has_key: !!c.key,

@@ -77,11 +77,15 @@ evidence_weight = w_source × c_type × d_time × 100
 
 设计取舍：**LLM 只做"理解"，不做"判定"**。判定类逻辑全部规则化，保证每个结论都能追溯到具体规则编号（P1~P12）。
 
-**LLM 已在代码中实现**（`backend/src/llm.js`），启用方式见 §8；未配置 Key 时全链路走规则抽取，功能完整。三重防护保证 LLM 不污染数据：
+**LLM 已实现并完成真实调用验证**（`backend/src/llm.js`，当前接月之暗面 `kimi-k2.6`）：10 篇样例文档全部走 LLM 抽取，结果与规则版一致（3 事件 / 9 证据 / 状态演化链均正确）。未配置 Key 时全链路走规则抽取，功能完整。
 
-1. **输出结构校验**：必须是合法 JSON 且字段在枚举内，否则丢弃并重试 1 次；
+三重防护保证 LLM 不污染数据：
+
+1. **输出结构校验**：必须是合法 JSON 且字段在枚举内，否则丢弃并重试；
 2. **证据真实性校验**：`quote` 必须是**原文连续子串**，编造内容一律拒绝入库（防幻觉）；
 3. **自动降级**：超时/不可达/校验失败 → 回退规则抽取，并记录 `llm_fallback_reason`。
+
+另有两条工程防线：`response_format` 不被支持时**自动去掉该参数重试**；`temperature` 按需发送（部分模型只接受固定值，如 `kimi-k2.6` 仅接受 1，写死会导致 400 并静默回退）。
 
 状态接口 `GET /api/llm/status` 可随时查看当前走的是 LLM 还是规则。
 
@@ -168,7 +172,7 @@ cd frontend && npm install && npm run dev   # http://localhost:5199
 
 > 注意：Vite 在本环境绑定 IPv6，开发模式请用 `http://localhost:5199`（`127.0.0.1` 不通）。
 
-### 8.3 启用 LLM 抽取（可选）
+### 8.3 启用 LLM 抽取（当前已启用：月之暗面 kimi-k2.6）
 
 ```bash
 cd backend
@@ -176,6 +180,13 @@ cp .env.example .env     # 然后编辑 .env 填入 LLM_API_KEY
 # LLM_BASE_URL / LLM_MODEL 按厂商填写，模板里已给出智谱/DeepSeek/Qwen/Kimi 的取值
 npm start                # 重启后生效；用 /api/llm/status 确认
 ```
+
+切换厂商时注意两处坑（本环境已踩过并处理）：
+
+- **`temperature`**：部分模型只接受固定值（`kimi-k2.6` 仅接受 1）。默认**不发送**该参数，需要时用 `LLM_TEMPERATURE` 显式指定。
+- **`response_format`**：若厂商不支持 `json_object`，代码会**自动去掉该参数重试**（提示词本身已要求只输出 JSON），不会因此失败。
+
+模型可用性自查：`GET {LLM_BASE_URL}/models`。
 
 ## 9. 测试
 

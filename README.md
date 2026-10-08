@@ -157,14 +157,14 @@ $env:PATH = "D:\Zcode\tools\node-v25.8.1-win-x64;D:\Zcode\tools\portablegit\pack
 cd backend
 npm install
 npm run seed                 # 生成演示数据
-npm start                    # 打开 http://127.0.0.1:8899
+npm start                    # 打开 http://127.0.0.1:5311
 # 若未构建前端，先执行 cd ../frontend && npm install && npm run build
 ```
 
 ### 8.2 前后端分离开发模式
 
 ```bash
-# 终端 1：后端（8899）
+# 终端 1：后端（5311；本机 8787/8899 被平台代理占用，故避开）
 cd backend && npm install && npm start
 # 终端 2：前端（5199，通过代理访问 /api）
 cd frontend && npm install && npm run dev   # http://localhost:5199

@@ -1,5 +1,5 @@
 // 接口层验证：主链路取数 + 异常/边界（404、空态、合规字段）
-const BASE = process.env.API_BASE || 'http://127.0.0.1:8899';
+const BASE = process.env.API_BASE || 'http://127.0.0.1:5311';
 const results = [];
 const check = (id, name, cond, detail = '') => results.push({ id, name, pass: !!cond, detail });
 

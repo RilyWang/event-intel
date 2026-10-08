@@ -1,92 +1,156 @@
-// 样例数据：全部为虚构公司/虚构事件，用于演示主链路（不含任何真实主体信息）。
+// 样例数据：全部来自真实公开披露与行情，数据源为同花顺 iFinD MCP。
+// 内容逐字取自公告原文/资讯原文，未经改写；行情为 iFinD 真实日线数据。
+// 覆盖四类真实演化：更新（鸿路钢构 4 篇跨 3 个月）／更正（金冠股份）／否认（中鼎股份）／过期（远东股份）。
+// 获取方式：tools/ifind-fetch-*.js 通过 iFinD MCP 拉取后由 tools/gen-samples.js 生成。
+
 export const TARGETS = [
-  { target_code: '600001.SH', target_name: '示例食品', market: 'A', alias: JSON.stringify(['示例食品股份有限公司']), active: 1 },
-  { target_code: '600002.SH', target_name: '示例科技', market: 'A', alias: JSON.stringify(['示例智联']), active: 1 },
+  { target_code: '002541.SZ', target_name: '鸿路钢构', market: 'A', alias: JSON.stringify([]), active: 1 },
+  { target_code: '300510.SZ', target_name: '金冠股份', market: 'A', alias: JSON.stringify([]), active: 1 },
+  { target_code: '000887.SZ', target_name: '中鼎股份', market: 'A', alias: JSON.stringify([]), active: 1 },
+  { target_code: '600869.SH', target_name: '远东股份', market: 'A', alias: JSON.stringify([]), active: 1 },
+  { target_code: '002761.SZ', target_name: '浙江建投', market: 'A', alias: JSON.stringify([]), active: 1 },
 ];
 
-// 按 disclose_time 时序排列，用于演示事件演化
+// 按披露日期排列；同一主体+同一事件类型的多篇公告会被归并为同一事件
 export const DOCUMENTS = [
   {
-    doc_code: 'DOC-0001', source_type: 'news', source_name: '股吧·社交媒体', source_level: 1,
-    title: '网传示例食品拟收购华南乳业',
-    content: '据传，示例食品拟收购华南乳业60%股权，交易金额约8亿元，消息未经证实。',
-    disclose_time: '2026-08-05 09:12:00', crawl_time: '2026-08-05 09:40:00', fetched_via: 'public_web',
-    url: 'https://example.com/rumor/1',
+    doc_code: 'DOC-R001', source_type: 'announcement', source_name: '同花顺 iFinD（公告）', source_level: 5,
+    title: '鸿路钢构：关于公司收到中标通知书的公告',
+    content: '证券代码：002541。债券代码：128134。证券简称：鸿路钢构。公告编号：2026-058。债券简称：鸿路转债。安徽鸿路钢结构(集团)股份有限公司关于公司收到中标通知书的公告。 本公司及董事会全体成员保证信息披露内容的真实、准确和完整，没有虚假记载、误导性陈述或重大遗漏。 近日，安徽鸿路钢结构（集团）股份有限公司（以下简称“公司”）收到中建三局第一建设工程有限责任公司钢结构分公司签发的《中标通知书》，根据《中标通知书》，我司被确定为“江夏楚能项目和孝感楚能项目钢结构工程”的中标单位。 4、中标价（合同总价）：暂定人民币507,952,785.60元（大写：人民币伍亿零柒佰玖拾伍万贰仟柒佰捌拾伍元陆角）。5、工期：暂定2026年7月15日——2026年11月30日，具体工期以满足甲方项目需求为准。 6、公司与招标人不存在关联关系。二、中标预计对公司业绩的影响。本项目中标金额为50,795.28万元，占公司2025年度经审计营业总收入的2.3%。该项目的中标预计将会对公司2026年业绩产生一定影响。三、风险提示。 截至本公告披露日，尚未与该项目招标单位签订正式合同，敬请投资者注意投资风...',
+    disclose_time: '2026-07-04', crawl_time: '2026-07-04', fetched_via: 'ifind_mcp',
+    url: '',
+    // 归属：002541.SZ
   },
   {
-    doc_code: 'DOC-0002', source_type: 'news', source_name: '财经自媒体', source_level: 2,
-    title: '示例食品或将收购华南乳业',
-    content: '示例食品或将收购华南乳业，预计交易金额不超过8亿元。',
-    disclose_time: '2026-08-07 14:03:00', crawl_time: '2026-08-07 14:30:00', fetched_via: 'public_web',
-    url: 'https://example.com/news/2',
+    doc_code: 'DOC-R002', source_type: 'announcement', source_name: '同花顺 iFinD（公告）', source_level: 5,
+    title: '鸿路钢构：关于公司签订重大经营合同的公告',
+    content: '证券代码：002541。债券代码：128134。证券简称：鸿路钢构。公告编号：2026-060。债券简称：鸿路转债。安徽鸿路钢结构(集团)股份有限公司关于公司签订重大经营合同的公告。 2026年7月4日，安徽鸿路钢结构（集团）股份有限公司（以下简称“公司”或“乙方”）在证券时报、证券日报、中国证券报、 上海证券报及巨潮资讯网（www.cninfo.com.cn)上披露了《关于收到中标通知书的公告》（公告编号：2026-058），公司被确认为“江夏楚能项目和孝感楚能项目钢结构工程”的中标单位。 近日，公司收到了经合同双方盖章的《采购合同》，合同主要情况如下： 一、合同签署概况。公司与中建三局云采科技有限公司（以下简称“中建三局云采公司”或“甲方��）签订的《武汉***新能源（二期）项目钢结构成品构件电商化采购合同》， 合同暂定含税金额为507,952,785.60元人民币(大写：伍亿零柒佰玖拾伍万贰仟柒佰捌拾伍元陆角整）。 项目金额：合同暂定含税价为507,952,785.60元人民币(大写：伍亿零柒佰玖拾伍万贰仟柒佰捌拾伍元陆角整）。 ',
+    disclose_time: '2026-07-10', crawl_time: '2026-07-10', fetched_via: 'ifind_mcp',
+    url: '',
+    // 归属：002541.SZ
   },
   {
-    doc_code: 'DOC-0003', source_type: 'announcement', source_name: '上交所公告', source_level: 5,
-    title: '示例食品关于筹划收购华南乳业股权的公告',
-    content: '公司正在筹划以现金方式收购华南乳业60%股权，交易金额不超过8亿元。本次交易尚需履行审批程序。',
-    disclose_time: '2026-08-12 08:00:00', crawl_time: '2026-08-13 09:05:00', fetched_via: 'ifind_mcp',
-    url: 'https://example.com/announcement/3',
+    doc_code: 'DOC-R003', source_type: 'announcement', source_name: '同花顺 iFinD（公告）', source_level: 5,
+    title: '鸿路钢构：关于公司全资子公司收到中标通知书的公告',
+    content: '证券代码：002541。债券代码：128134。证券简称：鸿路钢构。公告编号：2026-083。债券简称：鸿路转债。安徽鸿路钢结构(集团)股份有限公司。关于公司全资子公司收到中标通知书的公告。 本公司及董事会全体成员保证信息披露内容的真实、准确和完整，没有虚假记载、误导性陈述或重大遗漏。 近日，安徽鸿路钢结构（集团）股份有限公司（以下简称“公司”）全资子公司涡阳县鸿路建材有限公司收到中诚国实（安徽）供应链管理有限公司签发的《中标通知书》，根据《中标通知书》， 我司被确定为“***数据中心”项目及“***年产10万吨高性能锂离子电池负极材料项目”的中标单位。现将中标的有关情况公告如下：。一、中标项目1的主要内容。1、工程名称：***数据中心项目。2、建设地点：内蒙古自治区。 中标工程量（清单量）：26,175.18吨，价格为固定综合单价。5、公司与招标人不存在关联关系。二、中标项目2的主要内容。1、工程名称：***年产10万吨高性能锂离子电池负极材料项目。 3、中标内容：本次中标项目为***年产10万吨高性能锂离子电池负极材料项目钢结构工程成品钢构件制造及运输。 三、中标预计对公司业绩的...',
+    disclose_time: '2026-10-08', crawl_time: '2026-10-08', fetched_via: 'ifind_mcp',
+    url: '',
+    // 归属：002541.SZ
   },
   {
-    doc_code: 'DOC-0004', source_type: 'report', source_name: '券商研报', source_level: 3,
-    title: '研报：示例食品收购华南乳业点评',
-    content: '我们看好本次收购对渠道的协同效应，维持对示例食品的盈利预测，预计增厚利润。',
-    disclose_time: '2026-08-13 16:00:00', crawl_time: '2026-08-13 18:20:00', fetched_via: 'ifind_mcp',
-    url: 'https://example.com/report/4',
+    doc_code: 'DOC-R004', source_type: 'announcement', source_name: '同花顺 iFinD（公告）', source_level: 5,
+    title: '鸿路钢构：关于公司及全资子公司收到中标通知书的公告',
+    content: '证券代码：002541。债券代码：128134。证券简称：鸿路钢构。公告编号：2026-088。债券简称：鸿路转债。安徽鸿路钢结构(集团)股份有限公司。关于公司及全资子公司收到中标通知书的公告。 本公司及董事会全体成员保证信息披露内容的真实、准确和完整，没有虚假记载、误导性陈述或重大遗漏。 近日，安徽鸿路钢结构（集团）股份有限公司（以下简称“公司”）及全资子公司安徽鸿翔建材有限公司分别收到上海宝冶集团有限公司、中建三局钢构科技有限公司北方公司签发的《委托加工单》、《中标通知书》， 根据《委托加工单》、《中标通知书》，我司被确定为上海宝冶集团有限公司“***钢结构项目”及中建三局钢构科技有限公司北方公司“***先进集成电路装备研发基地钢结构等五个项目钢结构制作”的中标单位。 现将中标的有关情况公告如下：。一、中标项目1的主要内容。1、工程名称：***钢结构项目。2、建设地点：安徽省合肥市。3、中标内容：***项目钢结构制作。4、中标价（合同总价，含税）：暂定人民币2.48亿元。 3、中标内容：***项目钢结构制作。4、中标价（合同总价，含税）：暂定人民币2.48亿元。5、钢结构总量51,...',
+    disclose_time: '2026-10-09', crawl_time: '2026-10-09', fetched_via: 'ifind_mcp',
+    url: '',
+    // 归属：002541.SZ
   },
   {
-    doc_code: 'DOC-0005', source_type: 'announcement', source_name: '公司公告', source_level: 5,
-    title: '示例食品关于媒体报道的澄清公告',
-    content: '针对相关媒体报道，公司澄清：公司未筹划上述收购事项，相关传闻不属实。',
-    disclose_time: '2026-08-20 07:30:00', crawl_time: '2026-08-20 08:10:00', fetched_via: 'ifind_mcp',
-    url: 'https://example.com/announcement/5',
-  },
-
-  {
-    doc_code: 'DOC-0006', source_type: 'announcement', source_name: '公司公告', source_level: 5,
-    title: '示例智联关于中标智慧城市项目的公告',
-    content: '示例智联中标某市智慧城市项目，中标金额3.2亿元，项目已签署合同。',
-    disclose_time: '2026-08-10 08:00:00', crawl_time: '2026-08-10 08:30:00', fetched_via: 'ifind_mcp',
-    url: 'https://example.com/announcement/6',
+    doc_code: 'DOC-R005', source_type: 'announcement', source_name: '同花顺 iFinD（公告）', source_level: 5,
+    title: '金冠股份：关于项目中标的公告',
+    content: '证券代码：300510。证券简称：金冠股份。公告编号：2026-020。吉林省金冠电气股份有限公司。关于项目中标的公告。本公司及董事会全体成员保证信息披露的内容真实、准确、完整，没有虚假记载、误导性陈述或者重大遗漏。 吉林省金冠电气股份有限公司（以下简称“公司”或“金冠股份”）及全资子公司南京能瑞电力科技有限公司（以下简称“能瑞电力”）近期中标了国家电网有限公司（以下简称“国家电网”）及其下属公司、 中国南方电网有限责任公司（以下简称“南方电网”）、济宁市市政投资有限公司（以下简称“济宁市政投”）、吉林吉润新材料有限公司（以下简称“吉林吉润”）、吉林碳谷碳纤维股份有限公司（以下简称“吉林碳谷”）的相关项目， 中标金额合计约为人民币25,234.05万元。公司现自愿披露相关中标信息如下：。一、项目概况。| 中标公司 | 招标人 | 项目名称 | 分标名称 | 标号 | 中标金额（万元） |。 | 金冠股份 | 中国南方电网有限责任公司 | 2026年主网一次设备第一批框架招标项目 | 10kV移开式高压开关柜 | 包2 | 4,029.57 |。 | 金冠股份 | 中国南方电网有限责任公...',
+    disclose_time: '2026-07-22', crawl_time: '2026-07-22', fetched_via: 'ifind_mcp',
+    url: '',
+    // 归属：300510.SZ
   },
   {
-    doc_code: 'DOC-0007', source_type: 'announcement', source_name: '公司公告', source_level: 5,
-    title: '示例科技关于智慧城市项目合同生效的公告',
-    content: '上述智慧城市项目合同已完成签署并生效，项目金额3.2亿元。',
-    disclose_time: '2026-08-11 08:00:00', crawl_time: '2026-08-11 08:25:00', fetched_via: 'ifind_mcp',
-    url: 'https://example.com/announcement/7',
+    doc_code: 'DOC-R006', source_type: 'announcement', source_name: '同花顺 iFinD（公告）', source_level: 5,
+    title: '金冠股份：关于项目中标公告的更正公告',
+    content: '| 中标公司 | 招标人 | 项目名称 | 分标名称 | 标号 | 中标金额（万元） |。 | 金冠股份 | 国网四川省电力公司国网福建省电力有限公司 | 2026年输变电项目第三次变电设备（含电缆）公开招标采购 | 开关柜 | 包16/包53 | 3,568.00 |。 | 金冠股份 | 国网陕西省电力有限公司 | 2026年第三次物资集中招标采购项目 | 分标006低压开关柜 | 包1 | 103.71 |。 | 金冠股份 | 浙江省交通投资集团有限公司招标采购管理中心 | 浙江省交通投资集团有限公司招标采购管理中心2026年变压器、充电桩、储能柜和箱变设备框架入围公开招标项目 | / 储能柜 | / | 5, 388.37 |。| 金冠股份 | 吉林吉润新材料有限公司 | 年产4000吨碳纤维热场材料项目（高压柜） | / 高压开关柜 | / | 832.00 |。 | 金冠股份 | 国网四川省电力公司国网福建省电力有限公司 | 2026年输变电项目第三次变电设备（含电缆）公开招标采购 | 开关柜 | 包16/包53 | 3,568.00 |。 公司本次中标项目的交易对方为国家电...',
+    disclose_time: '2026-07-23', crawl_time: '2026-07-23', fetched_via: 'ifind_mcp',
+    url: '',
+    // 归属：300510.SZ
   },
   {
-    doc_code: 'DOC-0008', source_type: 'announcement', source_name: '公司公告', source_level: 5,
-    title: '示例科技关于中标金额的更正公告',
-    content: '原公告中智慧城市项目中标金额3.2亿元有误，现更正为2.3亿元。',
-    disclose_time: '2026-08-18 08:00:00', crawl_time: '2026-08-18 08:40:00', fetched_via: 'ifind_mcp',
-    url: 'https://example.com/announcement/8',
+    doc_code: 'DOC-R007', source_type: 'announcement', source_name: '同花顺 iFinD（公告）', source_level: 5,
+    title: '中鼎股份：关于市场传闻的澄清及风险提示的公告',
+    content: '证券代码：000887。证券简称：中鼎股份。公告编号：2026-051。安徽中鼎密封件股份有限公司。关于市场传闻的澄清及风险提示的公告。 4、公司将根据战略合作协议的后续进展情况，按照法律法规的要求及时履行相关决策程序及信息披露义务，敬请广大投资者理性看待市场传闻，以公司在法定信息披露渠道披露的信息为准，坚持理性投资，审慎决策，注意投资风险。一、传闻情况。 中鼎股份与腾讯云正式签署战略合作协议。二、澄清说明。针对上述情况，公司董事会高度重视，立即组织相关部门对中鼎股份与腾讯云计。算（北京）有限责任公司（以下简称“腾讯云”）合作情况进行全面核查。澄清说明如下：。 请广大投资者注意投资风险；。4、公司将根据战略合作协议的后续进展情况，按照法律法规的要求及时履行相关决策程序及信息披露义务，敬请广大投资者理性看待市场传闻，以公司在法定信息披露渠道披露的信息为准，坚持理性投资，审慎决策， 注意投资风险。特此公告。安徽中鼎密封件股份有限公司。董事会。2026年8月12日。 ',
+    disclose_time: '2026-08-13', crawl_time: '2026-08-13', fetched_via: 'ifind_mcp',
+    url: '',
+    // 归属：000887.SZ
   },
-
   {
-    doc_code: 'DOC-0009', source_type: 'announcement', source_name: '公司公告', source_level: 5,
-    title: '示例食品2025年度业绩预告',
-    content: '预计2025年度净利润同比增长30%至40%。',
-    disclose_time: '2026-02-20 08:00:00', crawl_time: '2026-02-20 08:30:00', fetched_via: 'ifind_mcp',
-    url: 'https://example.com/announcement/9',
+    doc_code: 'DOC-R008', source_type: 'announcement', source_name: '同花顺 iFinD（公告）', source_level: 5,
+    title: '远东股份：2025年年度业绩预盈公告',
+    content: '一、本期业绩预告情况。（一）业绩预告期间。2025年1月1日至2025年12月31日。（二）业绩预告情况。 1.经财务部门初步测算，预计2025年年度实现归属于母公司所有者的净利润为4,500万元到6,500万元，与上年同期相比，将实现扭亏为盈。 2.预计2025年年度实现归属于母公司所有者的扣除非经常性损益的净利润为1,500万元到3,500万元。（三）本期业绩预告未经注册会计师审计。二、上年同期经营业绩和财务状况。（一）利润总额：-37,470.98万元。 归属于母公司所有者的净利润：-31,804.24万元。归属于母公司所有者的扣除非经常性损益的净利润：-37,721.41万元。（二）每股收益：-0.1433元。三、本期业绩预盈的主要原因。 智能缆网营收规模持续扩大；智能电池/储能产能利用率上升，大幅减亏；智慧机场订单充足，经营稳健。 ',
+    disclose_time: '2026-01-27', crawl_time: '2026-01-27', fetched_via: 'ifind_mcp',
+    url: '',
+    // 归属：600869.SH
   },
-
   {
-    doc_code: 'DOC-0010', source_type: 'news', source_name: '一般媒体', source_level: 2,
-    title: '行业要闻：快消品零售景气度回升',
-    content: '近期快消品零售景气度有所回升，行业整体向好，未提及具体公司事项。',
-    disclose_time: '2026-08-22 10:00:00', crawl_time: '2026-08-22 10:30:00', fetched_via: 'public_web',
-    url: 'https://example.com/news/10',
+    doc_code: 'DOC-R009', source_type: 'announcement', source_name: '同花顺 iFinD（公告）', source_level: 5,
+    title: '浙江建投：浙江省建设投资集团股份有限公司关于子公司收到中标通知书和签订工程合同的自愿信息披露公告',
+    content: '证券代码：002761。证券简称：浙江建投。浙江省建设投资集团股份有限公司。关于子公司收到中标通知书和签订工程合同的自愿信息披露公告。 本公司及董事会全体成员保证信息披露内容的真实、准确、完整，没有虚假记载、误导性陈述或重大遗漏。 浙江省建设投资集团股份有限公司（以下简称“公司”）子公司华营智建有限公司（以下简称“华营智建”）于近日收到中标通知书，华营智建成功中标润泽（香港）沙岭数据园区项目总承包工程项目， 中标价约为31亿港元（约为人民币26.78亿元）。子公司浙江省工业设备安装集团有限公司（以下简称“浙江安装”）于近日签订了阿尔��利亚哈西·迈萨乌德炼油厂项目机电安装标段一项目工程合同， 合同金额约为2.15亿美元（约为人民币14.65亿元）。一、项目基本情况。（一）润泽（香港）沙岭数据园区项目总承包工程项目。1、项目名称：润泽（香港）沙岭数据园区项目总承包工程项目。2、施工总工期：570日历天。 4、项目计划机械竣工时间：暂定2030年1月。5、中标合同金额：约2.15亿美元（约人民币14.65亿元）（具体金额以实际结算为准）6、项目概况：公司与总承包联合体直接签署机电工程合同，负...',
+    disclose_time: '2026-10-09', crawl_time: '2026-10-09', fetched_via: 'ifind_mcp',
+    url: '',
+    // 归属：002761.SZ
+  },
+  {
+    doc_code: 'DOC-R010', source_type: 'news', source_name: 'iFinD 财经资讯', source_level: 2,
+    title: '浙江建投：子公司华营智建中标31亿港元项目',
+    content: '10月8日，浙江建投(002761.SZ)公告，子公司华营智建近日中标润泽(香港)沙岭数据园区项目总承包工程项目，中标价约为31亿港元(约为人民币26.78亿元)； 子公司浙江安装近日签订阿尔及利亚哈西.迈萨乌德炼油厂项目机电安装标段一项目工程合同，合同金额约为2.15亿美元(约为人民币14.65亿元)。 ',
+    disclose_time: '2026-10-08', crawl_time: '2026-10-08', fetched_via: 'ifind_mcp',
+    url: 'http://news.10jqka.com.cn/19700122/c680489620.shtml',
+    // 归属：002761.SZ
+  },
+  {
+    doc_code: 'DOC-R011', source_type: 'news', source_name: 'iFinD 财经资讯', source_level: 2,
+    title: '多家A股上市公司披露大额订单',
+    content: '多家A股上市公司披露大额订单（来源：经济日报） 转自：经济日报 9月16日，广州赛意信息科技股份有限公司公告称，该公司与W公司签署了两份算力服务合同，涉及金额约67.2亿元。 此前，包括甘肃金刚光伏股份有限公司、深圳市宇顺电子股份有限公司等多家上市公司也相继签订了算力服务合同。 8月31日，苏州金螳螂建筑装饰股份有限公司发布公告称，公司及下属子公司／孙公司合计中标金额约5.16亿元， 涉及“南门外大街商圈北部片区城市更新项目A地块——天津海信广场裙楼项目”“芜湖梦溪科创走廊5号楼酒店改造提升项目”及“越南S4区W塔室内精装修工程”等项目。 此外，包括重庆建工集团股份有限公司、龙建路桥股份有限公司、浙江省围海建设集团股份有限公司等多家上市公司也相继公布了工程中标信息。“中标捷报折射行业景气度回升与存量市场新机遇。 例如，宁波东方电缆股份有限公司公告称，近期其中标了多个海洋能源项目，合计中标金额约28.42亿元，涵盖绿色输电设施（电力工程与装备线缆）、电力新能源（海底电缆与高压电缆）以及深海科技（海洋装备与工程运维）三个领域。 江苏亨通光电股份有限公司也于近期披露，该公司及其控股子公司陆续...',
+    disclose_time: '2026-09-18', crawl_time: '2026-09-18', fetched_via: 'ifind_mcp',
+    url: 'https://news.sohu.com/a/1077789253_122014422',
+    // 归属：不涉及关注标的（应作为未结构化文档保留）
+  },
+  {
+    doc_code: 'DOC-R012', source_type: 'news', source_name: 'iFinD 财经资讯', source_level: 2,
+    title: '中鼎股份回应传闻：与腾讯云在算力集群运营等方面仅签订框架协议',
+    content: '中鼎股份回应传闻：与腾讯云在算力集群运营等方面仅签订框架协议上证报中国证券网讯（记者 刘一枫）近日，有网络媒体报道“中鼎股份与腾讯云达成战略合作 云+AI共筑制造业智能新基建”相关消息，主要内容为， 8月10日中鼎股份与腾讯云正式签署战略合作协议。8月12日，中鼎股份开盘直线涨停，股价报收21.54元/股，涨幅10.01%。 针对上述情况，8月12日晚，中鼎股份发布澄清公告称，8月10日，公司与腾讯云签署战略合作协议，在算力集群投建与运营、算力中心液冷业务、采购腾讯云服务、AI应用合作方面展开合作，合作有效期为3年。 中鼎股份表示，本次签署的战略合作协议为未来可能的合作，并非腾讯云向公司单方面采购产品和服务，还涉及公司向腾讯云采购产品和服务，当前双方合作暂未产生收入，对公司本年度经营业绩暂不会构成重大影响； 此外，该合作项目不具备排他性。中鼎股份主营业务涉及机械基础件、汽车零部件、液压气动密封件、机械电子、精密模具、汽车工具等领域。同时，公司正在积极推进人形机器人、数据中心热管理、低空经济、AI技术运用等新领域赛道的布局。 近年来，中鼎股份分别与五洲新春、众擎机器人、埃夫特、傅利叶、联...',
+    disclose_time: '2026-08-12', crawl_time: '2026-08-12', fetched_via: 'ifind_mcp',
+    url: 'https://www.cnstock.com/commonDetail/758990?commTag=true',
+    // 归属：000887.SZ
+  },
+  {
+    doc_code: 'DOC-R013', source_type: 'news', source_name: 'iFinD 财经资讯', source_level: 2,
+    title: '鸿路钢构（002541）2026半年报点评：2026H1归母净利润同增52.2%，新签合同同增12.4%',
+    content: '鸿路钢构（002541）2026半年报点评：2026H1归母净利润同增52.2%，新签合同同增12.4%2026-09-09 国泰海通证券 刘银河 核心观点与关键数据 2026年上半年， 涡阳智能制造基地项目落地，进一步扩大智能装备研发与产能规模，支撑装备对外销售业务持续拓展。鸿路钢构报告重点分析了哪些方面？ 报告重点分析了鸿路钢构2026年上半年的经营业绩，包括净利润、新签合同额、营收等关键财务数据，以及毛利率、期间费用率、归母净利率、加权ROE等盈利能力指标。 同时，报告还关注了公司钢结构产品产量及扣非吨净利增长情况，并详细介绍了公司在智能制造领域的转型进展，如机器人应用、市场化销售及基地项目落地等。当前钢结构市场现状如何？ 鸿路钢构2026半年报显示，公司钢结构产品产量同比增长14.3%，达到约270.0万吨，扣非吨净利同比增长48.7%，达到149.8元/吨，反映出钢结构市场需求较为旺盛。 公司通过智能化装备的应用和销售，正积极拓展市场，并已实现远销多个国家。但需关注宏观政策及钢铁行业需求变化带来的潜在影响。鸿路钢构报告提示了哪些风险？ 报告提示需关注宏观政策超预期紧缩、钢铁行...',
+    disclose_time: '2026-09-10', crawl_time: '2026-09-10', fetched_via: 'ifind_mcp',
+    url: 'https://fxbaogao.com/detail/5688028',
+    // 归属：002541.SZ
+  },
+  {
+    doc_code: 'DOC-R014', source_type: 'news', source_name: 'iFinD 财经资讯', source_level: 2,
+    title: '鸿路钢构更新：三季度业绩有望超预期，机器人为新增长极',
+    content: '鸿路钢构更新：三季度业绩有望超预期，机器人为新增长极。鸿路钢构三季度业绩有望继续超预期，智能化改造驱动产能跃升，机器人为新增长极，继续重点推荐。智能化改造驱动产能跃升。 通过焊接机器人、激光切割、拼装自动化等智能装备替代人工，在不新增厂房面积的前提下实现产能从 600 万吨跃升至 900 万吨，单人工效显著提升（1 人可管理 6-7 台焊接设备）， 人工成本从 450 元/吨降至 350 元/吨。商业模式转向产品化。摒弃传统"加工+安装"工程模式（回款慢、话语权弱），转向"先付款后发货"的产品销售模式，对标美国巴特勒，应收账款控制在 1 亿多元，回款质量显著改善。 已覆盖韩国、美国、俄罗斯、东南亚等市场，美标/欧标产品报价达 8000 元/吨（国内仅 5000 元/吨），毛利率 30%-40%，海外订单占比提升至 25%-30%。成本优势与格局优化。 通过百万吨级集中采购（沙钢、鞍钢）、自建配套工厂（油漆厂、焊丝厂）、核心零部件自制（成本降至 1800 元/个）三重手段，综合成本较同行低 200-400 元/吨。 传统"制作+施工"一体化企业持续退出，坚持产品化路线的鸿路钢构竞争优势持...',
+    disclose_time: '2026-09-03', crawl_time: '2026-09-03', fetched_via: 'ifind_mcp',
+    url: 'https://xueqiu.com/1127028419/407943799?md5__1038=n4%2BxgDnD0iDt%3D4CTe0v%2Bb%2BNeiKTqAKmKtGO0eD',
+    // 归属：002541.SZ
   },
 ];
 
-// 影响验证用行情快照（公开来源示例数据）
+// 事件影响验证：iFinD 真实日线行情（锚定事件披露日前后，仅作客观参考，不构成因果结论）
 export const IMPACT = [
-  { target_code: '600001.SH', anchor: 'pre_event', metric_date: '2026-08-04', close_price: 42.10, pct_change: 0.5, volume: 1200000, source: 'public' },
-  { target_code: '600001.SH', anchor: 'post_event', metric_date: '2026-08-13', close_price: 45.80, pct_change: 3.2, volume: 2600000, source: 'public' },
-  { target_code: '600001.SH', anchor: 'post_event', metric_date: '2026-08-21', close_price: 43.05, pct_change: -2.1, volume: 1800000, source: 'public' },
-  { target_code: '600002.SH', anchor: 'pre_event', metric_date: '2026-08-07', close_price: 18.60, pct_change: -0.3, volume: 800000, source: 'public' },
-  { target_code: '600002.SH', anchor: 'post_event', metric_date: '2026-08-12', close_price: 20.15, pct_change: 4.1, volume: 1500000, source: 'public' },
-  { target_code: '600002.SH', anchor: 'post_event', metric_date: '2026-08-19', close_price: 19.40, pct_change: -1.6, volume: 1100000, source: 'public' },
+  { target_code: '300510.SZ', anchor: 'post_event', metric_date: '2026-07-24', close_price: 3.44, pct_change: -6.0109, volume: 94893799.99999999, source: 'ifind_mcp' },
+  { target_code: '300510.SZ', anchor: 'post_event', metric_date: '2026-07-23', close_price: 3.66, pct_change: 20, volume: 98491058, source: 'ifind_mcp' },
+  { target_code: '300510.SZ', anchor: 'post_event', metric_date: '2026-07-22', close_price: 3.05, pct_change: -1.6129, volume: 13099100, source: 'ifind_mcp' },
+  { target_code: '300510.SZ', anchor: 'pre_event', metric_date: '2026-07-21', close_price: 3.1, pct_change: -1.2739, volume: 21144359, source: 'ifind_mcp' },
+  { target_code: '600869.SH', anchor: 'post_event', metric_date: '2026-01-28', close_price: 12.67, pct_change: 9.9826, volume: 145170000, source: 'ifind_mcp' },
+  { target_code: '600869.SH', anchor: 'post_event', metric_date: '2026-01-27', close_price: 11.52, pct_change: 1.8568, volume: 114100000, source: 'ifind_mcp' },
+  { target_code: '600869.SH', anchor: 'pre_event', metric_date: '2026-01-26', close_price: 11.31, pct_change: -0.3524, volume: 106939999.99999999, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-07-10', close_price: 19.66, pct_change: 4.1865, volume: 12116482, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-07-09', close_price: 18.87, pct_change: 0.2124, volume: 9977164, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-07-08', close_price: 18.83, pct_change: 5.6678, volume: 10649566, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-07-07', close_price: 18.1, pct_change: -3.2603, volume: 6195674, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-07-06', close_price: 18.71, pct_change: 2.2404, volume: 9708611, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-07-05', close_price: 18.3, pct_change: null, volume: null, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-07-04', close_price: 18.3, pct_change: null, volume: null, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'pre_event', metric_date: '2026-07-03', close_price: 18.3, pct_change: 0.8264, volume: 13297720, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'pre_event', metric_date: '2026-07-02', close_price: 18.15, pct_change: 3.3011, volume: 15515305, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-10-09', close_price: 18.25, pct_change: null, volume: null, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-10-08', close_price: 18.25, pct_change: -0.5991, volume: 10596289, source: 'ifind_mcp' },
+  { target_code: '002541.SZ', anchor: 'post_event', metric_date: '2026-10-07', close_price: 18.36, pct_change: null, volume: null, source: 'ifind_mcp' },
+  { target_code: '000887.SZ', anchor: 'post_event', metric_date: '2026-08-14', close_price: 21.82, pct_change: -7.8936, volume: 166020000, source: 'ifind_mcp' },
+  { target_code: '000887.SZ', anchor: 'post_event', metric_date: '2026-08-13', close_price: 23.69, pct_change: 9.9814, volume: 76987448, source: 'ifind_mcp' },
+  { target_code: '000887.SZ', anchor: 'post_event', metric_date: '2026-08-12', close_price: 21.54, pct_change: 10.0102, volume: 56181813, source: 'ifind_mcp' },
+  { target_code: '002761.SZ', anchor: 'post_event', metric_date: '2026-10-09', close_price: 7.55, pct_change: null, volume: null, source: 'ifind_mcp' },
+  { target_code: '002761.SZ', anchor: 'post_event', metric_date: '2026-10-08', close_price: 7.55, pct_change: -1.6927, volume: 16168514, source: 'ifind_mcp' },
 ];

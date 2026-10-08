@@ -19,20 +19,22 @@ const now = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
 // ---------- 端点实现 ----------
 
 export function health() {
+  const ex = snapshot.extraction || { label: '未知', llm_events: 0, rule_events: 0 };
   return ok({
     status: 'up',
     time: now(),
     as_of: AS_OF,
     mode: MODE,
-    db: 'snapshot（只读快照，数据由 LLM 抽取生成）',
+    db: `snapshot（只读快照；数据来源：${ex.label}）`,
+    extraction: ex,
     llm: {
-      available: true,
-      model: 'kimi-k2.6',
-      note: '演示数据即由该模型抽取生成；线上重跑需完整 Node 版（见 README）',
+      // 注意：描述的是「这批数据由什么抽取」，不是「线上能调 LLM」
+      data_extracted_by: ex.label,
+      note: '线上为只读快照，运行时不调用 LLM；实时抽取见本地完整版（README §8）',
     },
     data_sources: {
       ifind_mcp: 'not_configured', fuyao: 'not_configured',
-      public_web: 'available', sample: 'available',
+      cninfo: 'available', public_web: 'available', sample: 'available',
     },
   });
 }

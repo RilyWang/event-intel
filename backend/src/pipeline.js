@@ -9,26 +9,15 @@ loadEnv();
 
 const MERGE_CONFIDENCE_MIN = 60;
 
-const TYPE_RE = [
-  [/收购|并购|重组|股权转让|资产购买|要约/, 'ma'],
-  [/中标|合同|订单|签署|框架协议/, 'contract'],
-  [/处罚|问询|违规|立案|监管|警示|谴责/, 'penalty'],
-  [/业绩预告|业绩快报|净利润|预增|预减|营业收入/, 'guidance'],
-  [/增持|减持|回购|股份转让/, 'equity'],
-];
-
 function pickQuote(content) {
   const parts = content.split(/(?<=[。；;!?])/).map((s) => s.trim()).filter(Boolean);
-  const key = /收购|中标|否认|更正|金额|股权|处罚|业绩|不属实/;
+  const key = /收购|中标|否认|更正|金额|股权|处罚|业绩|不属实|风险提示/;
   const hit = parts.find((p) => key.test(p));
   return (hit || parts[0] || content).slice(0, 140);
 }
 
-/** 规则侧事件类型判定（供规则抽取与 LLM 结果的 other 兜底共用） */
-export function ruleEventType(text) {
-  for (const [re, ty] of TYPE_RE) if (re.test(text)) return ty;
-  return 'other';
-}
+/** 事件类型判定统一走 rules.js（标题优先，避免正文误命中） */
+const ruleEventType = R.ruleEventType;
 
 /** F-02 抽取 · 规则分支（无 LLM 时使用，也是 LLM 失败时的兜底） */
 export function extractByRule(doc, targets) {
@@ -46,7 +35,7 @@ export function extractByRule(doc, targets) {
     if (hitAlias) { subject = t; matchedBy = 'alias'; mergeConfidence = 80; break; }
   }
 
-  const eventType = ruleEventType(text);
+  const eventType = ruleEventType(text, doc.title);
 
   const amounts = [...text.matchAll(/([\d.]+)\s*(亿|万)?元/g)].map((m) => `${m[1]}${m[2] || ''}元`);
   const dm = text.match(/(20\d{2})年(\d{1,2})月(\d{1,2})日/);
@@ -76,7 +65,7 @@ export async function extract(doc, targets) {
     // 防事件碎片化：模型给出 other（弱默认）但规则能识别出具体类型时，采用规则类型。
     // 否则"澄清/更正"类文本会被归到 other，导致同一事件被拆成两个、状态演化中断。
     if (eventType === 'other') {
-      const ruleType = ruleEventType(`${doc.title} ${doc.content}`);
+      const ruleType = ruleEventType(`${doc.title} ${doc.content}`, doc.title);
       if (ruleType !== 'other') {
         eventType = ruleType;
         typeNote = 'llm_subject+rule_type';
@@ -204,35 +193,36 @@ export async function ingestDocument(db, doc, targets) {
 
   const statusChanged = finalStatus !== prevStatus;
   let versionNo = db.prepare('SELECT COALESCE(MAX(version_no),0) AS v FROM event_version WHERE event_id=?').get(ev.id).v;
+  const isFirst = versionNo === 0;
+
+  // 版本演化：**每篇新归并的文档都产生一个版本**（题目要求"版本演化"，同状态的新证据亦属"更新"）。
+  // 状态变化时变更类型取实际演化类型（deny/correct/expire），否则记 update。
+  versionNo += 1;
+  const direction = R.impactDirection(doc.title + doc.content, finalStatus);
+  const changeType = isFirst ? 'initial' : (statusChanged ? changeTypeOf(finalStatus) : 'update');
+  const changeSummary = isFirst
+    ? `事件首次识别：${doc.title}`
+    : statusChanged
+      ? `状态由「${R.STATUS_CN[prevStatus]}」变为「${R.STATUS_CN[finalStatus]}」：${finalReason || ''}`
+      : `新增证据（状态不变）：${doc.title}`;
+
+  db.prepare(
+    `INSERT INTO event_version (event_id, version_no, change_type, change_summary, trigger_doc_id, snapshot, update_time)
+     VALUES (?,?,?,?,?,?,?)`
+  ).run(
+    ev.id, versionNo, changeType, changeSummary, docId,
+    JSON.stringify({ status: finalStatus, confidence: conf, direction, evidence: [evCode] }),
+    ts
+  );
 
   if (statusChanged) {
-    versionNo += 1;
-    const direction = R.impactDirection(doc.title + doc.content, finalStatus);
     db.prepare(
       `INSERT INTO event_state_log (event_id, from_status, to_status, rule_code, reason, evidence_ids, changed_time)
        VALUES (?,?,?,?,?,?,?)`
     ).run(ev.id, prevStatus, finalStatus, finalRule || '-', finalReason || '', JSON.stringify([evCode]), ts);
 
-    db.prepare(
-      `INSERT INTO event_version (event_id, version_no, change_type, change_summary, trigger_doc_id, snapshot, update_time)
-       VALUES (?,?,?,?,?,?,?)`
-    ).run(
-      ev.id, versionNo, changeTypeOf(finalStatus),
-      `状态由「${R.STATUS_CN[prevStatus]}」变为「${R.STATUS_CN[finalStatus]}」：${finalReason || ''}`,
-      docId,
-      JSON.stringify({ status: finalStatus, confidence: conf, direction, evidence: [evCode] }),
-      ts
-    );
-
     // F-08 通知（P12）
     emitNotifications(db, ev, prevStatus, finalStatus, prevConf, conf, finalRule, finalReason, ts, versionNo, direction);
-  } else if (versionNo === 0) {
-    versionNo = 1;
-    db.prepare(
-      `INSERT INTO event_version (event_id, version_no, change_type, change_summary, trigger_doc_id, snapshot, update_time)
-       VALUES (?,?,?,?,?,?,?)`
-    ).run(ev.id, 1, 'initial', `事件首次识别：${doc.title}`, docId,
-      JSON.stringify({ status: finalStatus, confidence: conf }), ts);
   }
 
   // F-06 结论重算（历史保留，is_current 切换）

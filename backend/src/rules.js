@@ -1,8 +1,9 @@
 // 规则层：所有判定与计算均为确定性规则（不使用 LLM），保证可解释、可复现、可追溯。
 // 依据 03-事件状态机定义.md 的 P7 / P8 / P9。
 
-/** 演示数据截止日：固定值，保证权重与过期判定可复现。 */
-export const AS_OF = '2026-08-25';
+/** 演示数据截止日：固定值，保证权重与过期判定可复现。
+ *  取最新一条数据（真实公开公告 2026-10-09）之后，避免出现"数据晚于截止日"。 */
+export const AS_OF = '2026-10-10';
 
 /** 来源权威等级 → 权重系数（P8） */
 export const SOURCE_W = { 5: 1.0, 4: 0.8, 3: 0.6, 2: 0.4, 1: 0.2 };
@@ -58,7 +59,9 @@ export function eventConfidence(weights) {
 const RUMOR_RE = /据传|传闻|网传|知情人士|消息称|疑似|市场消息|小道消息|未经证实/;
 const SPEC_RE = /或将|有望|预计|可能|拟|计划|筹备|正在考虑|传闻称/;
 const OPINION_RE = /看好|评级|观点|分析师|我们认为|维持|上调|下调|点评/;
-export const DENY_RE = /不属实|未筹划|澄清|否认|不存在|不实|无此事|未有|纯属/;
+// 注意：不可用裸词「不存在」/「不实」——A股公告的标准免责表述里常见
+//（如"公司与招标人不存在关联关系""没有虚假记载"），会造成大面积误判。
+export const DENY_RE = /澄清|不属实|未筹划|纯属|无此事|予以否认|否认上述|传闻不实|报道不实|不存在所述/;
 export const CORRECT_RE = /更正|修正|勘误|更正公告/;
 export const CONFIRM_RE = /已完成|获批|批复|已签署|已交割|正式落地|核准|已生效/;
 
@@ -76,8 +79,30 @@ export const isDeny = (t) => DENY_RE.test(t);
 export const isCorrect = (t) => CORRECT_RE.test(t);
 export const isConfirm = (t) => CONFIRM_RE.test(t);
 
+// 事件类型规则：按「标题 → 正文」两轮匹配。
+// 标题最精确（真实公告标题必含事件性质），正文常在无关处提到"合同"等词，故不能只看正文。
+const TYPE_RULES = [
+  [/中标|合同|订单|框架协议|采购|签署/, 'contract'],
+  [/业绩预告|业绩快报|业绩预盈|业绩预亏|业绩预增|预增|预减|净利润|营业收入|年度报告|半年度报告|季度报告|定期报告/, 'guidance'],
+  [/收购|并购|重组|股权转让|资产购买|要约|拟购买/, 'ma'],
+  [/处罚|问询|违规|立案|警示|谴责|监管函|关注函/, 'penalty'],
+  [/增持|减持|回购|股份转让/, 'equity'],
+];
+// 传闻/澄清/否认类：其「针对的事件类型」常在标题里说不清（如"关于市场传闻的澄清公告"）。
+// 必须先归为 other，否则传闻本体与其澄清会被拆成两个事件——这正是"同一事件识别"要避免的。
+// 注意：更正类不在此列，因为更正公告标题通常点明被更正的事项（如"关于项目中标公告的更正公告"→仍属中标）。
+const AMBIGUOUS_TITLE_RE = /传闻|澄清|否认|风险提示/;
+
+/** 事件类型判定（传闻/澄清优先归 other；其次按标题；最后才扫正文） */
+export function ruleEventType(text, title = '') {
+  if (AMBIGUOUS_TITLE_RE.test(title)) return 'other';
+  for (const [re, ty] of TYPE_RULES) if (re.test(title)) return ty;
+  for (const [re, ty] of TYPE_RULES) if (re.test(text)) return ty;
+  return 'other';
+}
+
 /** 影响方向判定（结论用；不含任何买卖建议） */
-const POS_RE = /中标|获批|增长|超预期|增持|回购|签署|完成|上调|预增|利好/;
+const POS_RE = /中标|获批|增长|超预期|增持|回购|签署|完成|上调|预增|预盈|利好/;
 const NEG_RE = /处罚|亏损|下滑|减持|终止|失败|问询|违规|下调|预减|立案/;
 
 export function impactDirection(text, status) {

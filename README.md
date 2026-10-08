@@ -2,6 +2,13 @@
 
 帮助使用者看清一个投资事件的**最初来源、事实变化、证据冲突、当前状态，以及与关注标的的关系**，且每个结论都可追溯到原文。
 
+| | |
+| --- | --- |
+| **线上地址** | **https://event-intel.pages.dev** |
+| 源代码仓库 | https://github.com/RilyWang/event-intel |
+| 演示形态 | 只读快照版（Cloudflare Pages）：数据由 `kimi-k2.6` 真实抽取后固化为快照 |
+| 完整版 | 本地/Node 主机运行，支持在线重跑主链路（见 §8） |
+
 > 本平台仅呈现投资事件与公开证据，用于情报整理与追溯，**不构成任何投资建议**。
 
 ---
@@ -205,10 +212,12 @@ node tests/cf-parity.js  # 10 项：Express 版 vs Cloudflare Pages 快照版 �
 
 ## 10. 部署
 
-线上采用 **Cloudflare Pages 快照版**（免信用卡、`pages.dev` 国内可达）：
+**线上已部署：https://event-intel.pages.dev**（Cloudflare Pages 快照版，免信用卡、`pages.dev` 国内可达）
 
-- 完整步骤与实测依据见 **[DEPLOY.md](DEPLOY.md)**
+- 完整步骤与平台可用性实测依据见 **[DEPLOY.md](DEPLOY.md)**
 - 快照版把已由 LLM 抽取好的结果固化为 `cf/snapshot.js`，由 `functions/api/*` 提供**只读** API
 - 与完整版（Express）的接口输出已用 `tests/cf-parity.js` 验证**逐字节一致**
 - 线上无需任何密钥；完整版（含在线重跑）见 `Dockerfile` / `render.yaml`
+
+**线上验证结果**（部署后实测）：health `mode=snapshot`；3 个事件状态为 `denied / corrected / expired`；筛选、404 业务码、文档 10 条（含 1 条未结构化）、通知 5 条（正文含变更原因）均正常；写入类接口返回 `code 503` 并说明原因，不伪装成功。
 

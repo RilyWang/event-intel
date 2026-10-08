@@ -1,0 +1,23 @@
+# Render Blueprint：把仓库连到 Render 后可一键创建服务
+# 说明：后端同域托管前端构建产物，因此只需一个 Web Service
+services:
+  - type: web
+    name: event-intel
+    runtime: node
+    plan: free
+    healthCheckPath: /api/health
+    buildCommand: npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install
+    startCommand: node backend/src/server.js
+    envVars:
+      # node:sqlite 自 Node 22.13 起免 flag，24 更稳；不固定版本可能因 Node 过旧启动失败
+      - key: NODE_VERSION
+        value: "24"
+      # 以下四项需在 Render 控制台填写（sync: false 表示不写入仓库）
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: LLM_TEMPERATURE
+        value: "1"
